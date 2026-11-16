@@ -1,5 +1,10 @@
 # 記帳本
 
+### [▶ 打開花費紀錄帳本](https://claude.ai/artifact/XARnPyQCAGmknijHy7obMF)
+### [▶ 打開股票損益帳本](https://claude.ai/artifact/UxgPWC8xDdghnMTfKgHyDQ)
+
+（點上面的連結會直接打開網頁，可以新增、編輯、刪除。需要登入 Claude。）
+
 兩本帳：**股票損益帳本**（每筆已實現損益）和 **花費紀錄帳本**（醫美、奢侈品、其它大額花費）。
 
 ## 連結
