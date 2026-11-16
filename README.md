@@ -2,6 +2,13 @@
 
 兩本帳：**股票損益帳本**（每筆已實現損益）和 **花費紀錄帳本**（醫美、奢侈品、其它大額花費）。
 
+## 連結
+
+| 帳本 | Claude 版（登入 Claude 即可用） | GitHub 版（下載後用瀏覽器打開） |
+|---|---|---|
+| 股票損益帳本 | https://claude.ai/artifact/UxgPWC8xDdghnMTfKgHyDQ | [web/股票損益帳本.html](web/股票損益帳本.html) |
+| 花費紀錄帳本 | https://claude.ai/artifact/XARnPyQCAGmknijHy7obMF | [web/花費紀錄帳本.html](web/花費紀錄帳本.html) |
+
 ## 檔案
 
 | 檔案 | 用途 |
