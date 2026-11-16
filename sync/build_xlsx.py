@@ -1,6 +1,8 @@
 """Rebuild the two Excel ledgers from the web ledgers' exported database rows.
 
 Usage: python sync/build_xlsx.py <export_dir> [repo_dir]
+       python sync/build_xlsx.py --from-data [repo_dir]   (rebuild Excel from data/*.json,
+       e.g. after editing with the GitHub edition of the pages in web/)
 <export_dir> holds trades/*.json and expenses/*.json (one JSON file per row,
 as exported from 股票損益帳本 and 花費紀錄帳本). Writes:
   股票買賣紀錄.xlsx, 花費紀錄.xlsx, data/trades.json, data/expenses.json
@@ -129,8 +131,13 @@ def build_expenses(rows, out):
 
 
 def main():
-    exp = Path(sys.argv[1]); repo = Path(sys.argv[2] if len(sys.argv) > 2 else ".")
-    trades, expenses = load(exp / "trades"), load(exp / "expenses")
+    repo = Path(sys.argv[2] if len(sys.argv) > 2 else ".")
+    if sys.argv[1] == "--from-data":
+        read = lambda n: json.loads((repo / "data" / f"{n}.json").read_text(encoding="utf-8"))
+        trades, expenses = read("trades"), read("expenses")
+    else:
+        exp = Path(sys.argv[1])
+        trades, expenses = load(exp / "trades"), load(exp / "expenses")
     if not trades or not expenses:
         sys.exit("export is missing trades or expenses rows; nothing written")
     (repo / "data").mkdir(exist_ok=True)

@@ -1,0 +1,353 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>
+<title>股票損益帳本</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one column ledger — summary strip, entry form, monthly bars, trade table. Taiwan convention: red = gain, green = loss. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --ink:#1b2230; --muted:#667085; --line:#e3e6ec;
+  --accent:#2f4b7c; --gain:#d1343a; --loss:#16875a; --gain-soft:#fbe9ea; --loss-soft:#e5f4ed;
+  --f-body:"Noto Sans TC",system-ui,sans-serif; --f-num:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12161d; --surface:#1a2029; --ink:#e7eaf0; --muted:#98a2b3; --line:#2b3340;
+  --accent:#8fb0e8; --gain:#f0686d; --loss:#3fbf87; --gain-soft:#3a2023; --loss-soft:#173329; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161d; --surface:#1a2029; --ink:#e7eaf0; --muted:#98a2b3; --line:#2b3340;
+  --accent:#8fb0e8; --gain:#f0686d; --loss:#3fbf87; --gain-soft:#3a2023; --loss-soft:#173329; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:980px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:22px}
+header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px}
+h1{font-size:24px;margin:0;font-weight:700;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.gain{color:var(--gain)} .loss{color:var(--loss)}
+.status{font-size:13px;color:var(--muted)}
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:grid;grid-template-columns:1.3fr 2fr;gap:20px}
+.net-label{font-size:13px;color:var(--muted);letter-spacing:.04em}
+.net{font-size:38px;font-weight:600;line-height:1.1;margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 18px}
+.stat dt{font-size:12px;color:var(--muted)} .stat dd{margin:2px 0 0;font-size:18px;font-weight:500}
+.winbar{grid-column:1/-1;height:8px;border-radius:4px;background:var(--loss);overflow:hidden;margin-top:4px}
+.winbar span{display:block;height:100%;background:var(--gain)}
+section h2{font-size:15px;margin:0 0 10px;font-weight:700}
+form{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;grid-template-columns:1.4fr 1fr 1.2fr 1.2fr auto;gap:10px;align-items:end}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0}
+input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:500}
+button:disabled{opacity:.5;cursor:not-allowed}
+.actions{display:flex;gap:8px}
+.actions button{flex:1;white-space:nowrap}
+form.editing{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+tr.editing td{background:var(--bg)}
+.rowbtns{display:flex;gap:6px;justify-content:flex-end}
+.formmsg{grid-column:1/-1;font-size:13px;min-height:1em;margin:0}
+.months{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.mrow{display:grid;grid-template-columns:72px 1fr 92px;gap:10px;align-items:center;font-size:13px}
+.track{height:14px;position:relative}
+.bar{position:absolute;top:0;height:100%;border-radius:3px}
+.tablebox{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:560px}
+th,td{padding:9px 14px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:500;background:var(--bg);position:sticky;top:0}
+td.r,th.r{text-align:right}
+tr:last-child td{border-bottom:none}
+.pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px}
+.pill.g{background:var(--gain-soft);color:var(--gain)} .pill.l{background:var(--loss-soft);color:var(--loss)}
+.del{font-size:12px;padding:3px 9px;color:var(--muted)}
+.del.confirm{color:var(--loss);border-color:var(--loss)}
+.empty{padding:28px 16px;text-align:center;color:var(--muted)}
+@media (max-width:720px){
+  .hero{grid-template-columns:1fr}
+  form{grid-template-columns:1fr 1fr}
+  form .actions{grid-column:1/-1}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+@media (prefers-reduced-motion:no-preference){.bar,.winbar span{transition:width .3s ease}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>股票損益帳本</h1>
+      <div class="sub">每筆已實現損益，單位 NT$。紅色為賺、綠色為賠（台股慣例）。</div>
+    </div>
+    <div class="status" id="status">連線中…</div>
+  </header>
+
+  <div class="hero">
+    <div>
+      <div class="net-label">淨損益</div>
+      <div class="net num" id="net">—</div>
+      <div class="sub" id="range">尚無資料</div>
+    </div>
+    <dl class="stats">
+      <div class="stat"><dt>勝率</dt><dd class="num" id="winrate">—</dd></div>
+      <div class="stat"><dt>交易筆數</dt><dd class="num" id="count">0</dd></div>
+      <div class="stat"><dt>賺 / 賠 筆數</dt><dd class="num" id="wl">0 / 0</dd></div>
+      <div class="stat"><dt>獲利合計</dt><dd class="num gain" id="gross">0</dd></div>
+      <div class="stat"><dt>虧損合計</dt><dd class="num loss" id="lossum">0</dd></div>
+      <div class="stat"><dt>平均每筆</dt><dd class="num" id="avg">0</dd></div>
+      <div class="winbar" aria-hidden="true"><span id="winfill" style="width:0"></span></div>
+    </dl>
+  </div>
+
+  <section>
+    <h2 id="form-title">新增交易</h2>
+    <form id="form" autocomplete="off">
+      <label for="f-name">股票名稱<input id="f-name" required placeholder="例：鴻勁"></label>
+      <label for="f-code">代號<input id="f-code" required placeholder="7769"></label>
+      <label for="f-date">賣出日期<input id="f-date" type="date" required></label>
+      <label for="f-pnl">損益 (NT$，賠錢填負數)<input id="f-pnl" type="number" step="1" required placeholder="-610"></label>
+      <div class="actions"><button class="primary" id="f-submit" type="submit">新增</button><button type="button" id="f-cancel" hidden>取消</button></div>
+      <p class="formmsg" id="formmsg" role="status"></p>
+    </form>
+  </section>
+
+  <section>
+    <h2>每月淨損益</h2>
+    <div class="months" id="months"><div class="empty">新增第一筆交易後，這裡會顯示每月損益。</div></div>
+  </section>
+
+  <section>
+    <h2>交易明細</h2>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>日期</th><th>股票</th><th>代號</th><th class="r">損益 (NT$)</th><th>結果</th><th></th></tr></thead>
+        <tbody id="rows"><tr><td colspan="6" class="empty">正在載入交易紀錄…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+/* GitHub 版資料層：把帳本資料存在 GitHub 倉庫的 data/<集合>.json。
+ * 提供與 Claude 網頁版相同的介面：collection(name).add / doc(id).update / doc(id).delete / onSnapshot。
+ * 權杖只存在這台電腦的瀏覽器（localStorage），不會寫進任何檔案。 */
+const GH = (() => {
+  const KEY = "lee-ledger-github";
+  const DEFAULTS = { owner: "SHUTINGLEE", repo: "LEE", branch: "claude/gallant-rubin-7oq112", token: "" };
+  let cfg = { ...DEFAULTS };
+  try { Object.assign(cfg, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+
+  const enc = s => { const b = new TextEncoder().encode(s); let bin = ""; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(bin); };
+  const dec = b64 => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\s/g, "")), c => c.charCodeAt(0)));
+  const api = (path, opts = {}) => fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`, {
+    cache: "no-store", ...opts,
+    headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${cfg.token}`, ...(opts.headers || {}) },
+  });
+
+  async function readFile(path) {
+    const r = await api(`${path}?ref=${encodeURIComponent(cfg.branch)}`);
+    if (r.status === 404) return { rows: [], sha: null };
+    if (r.status === 401 || r.status === 403) throw new Error("auth");
+    if (!r.ok) throw new Error("http " + r.status);
+    const j = await r.json();
+    return { rows: JSON.parse(dec(j.content)), sha: j.sha };
+  }
+
+  async function writeFile(path, rows, sha, message) {
+    const sorted = [...rows].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    const body = { message, branch: cfg.branch, content: enc(JSON.stringify(sorted, null, 1) + "\n") };
+    if (sha) body.sha = sha;
+    const r = await api(path, { method: "PUT", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } });
+    if (r.status === 409 || r.status === 422) return null; // 檔案剛被別處改過，重抓再試
+    if (r.status === 401 || r.status === 403) throw new Error("auth");
+    if (!r.ok) throw new Error("http " + r.status);
+    return (await r.json()).content.sha;
+  }
+
+  function panel(open, note) {
+    let el = document.getElementById("gh-panel");
+    if (!el) {
+      el = document.createElement("details");
+      el.id = "gh-panel";
+      el.innerHTML = `
+        <summary>GitHub 連線設定</summary>
+        <div class="gh-body">
+          <p class="gh-note" id="gh-note"></p>
+          <label for="gh-token">GitHub 權杖（fine-grained token，需要 LEE 倉庫的 Contents 讀寫權限）<input id="gh-token" type="password" autocomplete="off" placeholder="github_pat_…"></label>
+          <div class="gh-row">
+            <label for="gh-owner">帳號<input id="gh-owner"></label>
+            <label for="gh-repo">倉庫<input id="gh-repo"></label>
+            <label for="gh-branch">分支<input id="gh-branch"></label>
+          </div>
+          <div class="gh-row gh-btns"><button type="button" class="primary" id="gh-save">儲存並連線</button><button type="button" id="gh-clear">從這台電腦移除權杖</button></div>
+          <p class="gh-note">權杖只存在這台電腦的瀏覽器裡。在公用電腦上用完請按「移除權杖」。</p>
+        </div>`;
+      const st = document.createElement("style");
+      st.textContent = `#gh-panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+        #gh-panel summary{cursor:pointer;font-weight:500}
+        .gh-body{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+        .gh-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+        .gh-btns{grid-template-columns:auto auto;justify-content:start}
+        .gh-note{margin:0;font-size:13px;color:var(--muted)}`;
+      document.head.appendChild(st);
+      document.querySelector("header").after(el);
+      el.querySelector("#gh-save").onclick = () => {
+        cfg = { token: el.querySelector("#gh-token").value.trim(), owner: el.querySelector("#gh-owner").value.trim() || DEFAULTS.owner,
+                repo: el.querySelector("#gh-repo").value.trim() || DEFAULTS.repo, branch: el.querySelector("#gh-branch").value.trim() || DEFAULTS.branch };
+        try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) {}
+        location.reload();
+      };
+      el.querySelector("#gh-clear").onclick = () => { try { localStorage.removeItem(KEY); } catch (e) {} location.reload(); };
+    }
+    el.querySelector("#gh-token").value = cfg.token;
+    el.querySelector("#gh-owner").value = cfg.owner;
+    el.querySelector("#gh-repo").value = cfg.repo;
+    el.querySelector("#gh-branch").value = cfg.branch;
+    el.querySelector("#gh-note").textContent = note || "";
+    el.open = !!open;
+  }
+
+  async function connect(name, describe) {
+    const path = `data/${name}.json`;
+    if (!cfg.token) { panel(true, "第一次使用：請貼上 GitHub 權杖，資料會從你的私人倉庫讀取和儲存。"); return null; }
+    let state;
+    try { state = await readFile(path); }
+    catch (e) { panel(true, e.message === "auth" ? "權杖無效或沒有這個倉庫的權限，請重新設定。" : "連不到 GitHub，請檢查網路後重新整理。"); return null; }
+    panel(false, `已連線 ${cfg.owner}/${cfg.repo}（${cfg.branch}）`);
+    const listeners = [];
+    const snap = () => ({ docs: state.rows.map(r => { const { id, ...d } = r; return { id, data: () => d }; }), metadata: { fromCache: false, hasPendingWrites: false } });
+    const emit = () => listeners.forEach(fn => fn(snap()));
+
+    async function mutate(apply, message) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const fresh = await readFile(path);
+        const rows = apply(fresh.rows.map(r => ({ ...r })));
+        const sha = await writeFile(path, rows, fresh.sha, message);
+        if (sha) { state = { rows, sha }; emit(); return; }
+      }
+      throw new Error("conflict");
+    }
+    const newId = () => "w" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+    return {
+      collection: () => ({
+        onSnapshot(next) { listeners.push(next); next(snap()); return () => {}; },
+        async add(data) { const id = newId(); await mutate(rows => [...rows, { id, ...data }], `網頁編輯：新增 ${describe(data)}`); return { id }; },
+        doc: id => ({
+          async update(patch) { await mutate(rows => rows.map(r => r.id === id ? { ...r, ...patch } : r), `網頁編輯：修改 ${describe(patch)}`); },
+          async delete() { let gone = ""; await mutate(rows => rows.filter(r => { if (r.id === id) { gone = describe(r); return false; } return true; }), `網頁編輯：刪除 ${id}`); },
+        }),
+      }),
+    };
+  }
+  return { connect, panel: () => panel(true) };
+})();
+
+const $ = id => document.getElementById(id);
+const fmt = n => (n < 0 ? "-" : "") + Math.abs(Math.round(n)).toLocaleString("en-US");
+const signed = n => (n > 0 ? "+" : "") + fmt(n);
+const cls = n => n > 0 ? "gain" : n < 0 ? "loss" : "";
+let trades = [], db = null, canWrite = true, armed = null, editing = null;
+
+try { $("f-date").value = new Date().toISOString().slice(0,10); } catch(e){}
+
+function render(){
+  const list = [...trades].sort((a,b)=> b.date.localeCompare(a.date) || (b.created||0)-(a.created||0));
+  const wins = list.filter(t=>t.pnl>0), losses = list.filter(t=>t.pnl<0);
+  const net = list.reduce((s,t)=>s+t.pnl,0), gross = wins.reduce((s,t)=>s+t.pnl,0), lsum = losses.reduce((s,t)=>s+t.pnl,0);
+  const n = list.length, wr = n ? wins.length/n : 0;
+  $("net").textContent = n ? signed(net) : "—"; $("net").className = "net num " + cls(net);
+  $("winrate").textContent = n ? (wr*100).toFixed(1)+"%" : "—";
+  $("count").textContent = n; $("wl").textContent = wins.length+" / "+losses.length;
+  $("gross").textContent = fmt(gross); $("lossum").textContent = fmt(lsum);
+  $("avg").textContent = n ? signed(net/n) : "0"; $("avg").className = "num " + cls(net);
+  $("winfill").style.width = n ? (wr*100)+"%" : "0";
+  if (n){ const ds = list.map(t=>t.date).sort(); $("range").textContent = ds[0].replaceAll("-","/")+" – "+ds[ds.length-1].replaceAll("-","/"); }
+  else $("range").textContent = "尚無資料";
+
+  const tb = $("rows"); tb.textContent = "";
+  if (!n){ tb.innerHTML = '<tr><td colspan="6" class="empty">還沒有交易。用上方表單新增第一筆。</td></tr>'; }
+  for (const t of list){
+    const tr = document.createElement("tr"); if (editing===t.id) tr.className="editing";
+    const cells = [t.date.replaceAll("-","/"), t.name, t.code];
+    for (const c of cells){ const td=document.createElement("td"); td.textContent=c; if(c===cells[0]) td.className="num"; tr.appendChild(td); }
+    const p=document.createElement("td"); p.className="r num "+cls(t.pnl); p.textContent=signed(t.pnl); tr.appendChild(p);
+    const r=document.createElement("td"); const pill=document.createElement("span"); pill.className="pill "+(t.pnl>=0?"g":"l"); pill.textContent=t.pnl>0?"賺":t.pnl<0?"賠":"持平"; r.appendChild(pill); tr.appendChild(r);
+    const a=document.createElement("td"); a.className="r";
+    if (canWrite && db){
+      const w=document.createElement("div"); w.className="rowbtns";
+      const e=document.createElement("button"); e.type="button"; e.className="del"; e.textContent="編輯"; e.onclick=()=>startEdit(t); w.appendChild(e);
+      const b=document.createElement("button"); b.type="button"; b.className="del"+(armed===t.id?" confirm":""); b.textContent=armed===t.id?"確定刪除？":"刪除"; b.onclick=()=>onDelete(t.id); w.appendChild(b);
+      a.appendChild(w);
+    }
+    tr.appendChild(a); tb.appendChild(tr);
+  }
+
+  const m = {}; for (const t of list){ const k=t.date.slice(0,7); m[k]=(m[k]||0)+t.pnl; }
+  const keys = Object.keys(m).sort(); const box = $("months"); box.textContent="";
+  if (!keys.length){ box.innerHTML='<div class="empty">新增第一筆交易後，這裡會顯示每月損益。</div>'; return; }
+  const maxPos = Math.max(0,...keys.map(k=>m[k])), maxNeg = Math.max(0,...keys.map(k=>-m[k])), span = (maxPos+maxNeg)||1, zero = maxNeg/span*100;
+  for (const k of keys){
+    const v=m[k], row=document.createElement("div"); row.className="mrow";
+    const l=document.createElement("span"); l.className="num"; l.textContent=k.replace("-","/");
+    const tr=document.createElement("div"); tr.className="track";
+    const bar=document.createElement("div"); bar.className="bar"; const w=Math.abs(v)/span*100;
+    bar.style.background = v>=0 ? "var(--gain)" : "var(--loss)";
+    bar.style.left = (v>=0 ? zero : zero-w)+"%"; bar.style.width = Math.max(w,0.5)+"%";
+    tr.appendChild(bar);
+    const val=document.createElement("span"); val.className="num r "+cls(v); val.style.textAlign="right"; val.textContent=signed(v);
+    row.append(l,tr,val); box.appendChild(row);
+  }
+}
+
+function startEdit(t){
+  editing=t.id;
+  $("f-name").value=t.name; $("f-code").value=t.code; $("f-date").value=t.date; $("f-pnl").value=t.pnl;
+  $("form-title").textContent=`編輯：${t.name}(${t.code})`; $("f-submit").textContent="儲存修改"; $("f-cancel").hidden=false;
+  $("form").classList.add("editing"); $("formmsg").textContent="";
+  render(); $("form").scrollIntoView({behavior:"smooth",block:"center"}); $("f-pnl").focus({preventScroll:true});
+}
+function endEdit(){
+  editing=null; $("form-title").textContent="新增交易"; $("f-submit").textContent="新增"; $("f-cancel").hidden=true;
+  $("form").classList.remove("editing"); $("f-name").value=""; $("f-code").value=""; $("f-pnl").value=""; render();
+}
+$("f-cancel").addEventListener("click",()=>{ endEdit(); $("formmsg").textContent=""; });
+
+async function onDelete(id){
+  if (armed !== id){ armed = id; render(); setTimeout(()=>{ if(armed===id){armed=null;render();} }, 4000); return; }
+  armed = null;
+  try { await db.collection("trades").doc(id).delete(); }
+  catch(e){ $("formmsg").textContent = "刪除失敗，請稍後再試。"; }
+}
+
+$("form").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const msg = $("formmsg");
+  if (!db){ msg.textContent = "目前無法連到資料庫，交易沒有存下來。"; return; }
+  const name=$("f-name").value.trim(), code=$("f-code").value.trim().toUpperCase(), date=$("f-date").value, pnl=Math.round(Number($("f-pnl").value));
+  if (!name||!code||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(pnl)){ msg.textContent="請填完整的名稱、代號、日期和損益。"; return; }
+  $("f-submit").disabled = true;
+  try {
+    if (editing){
+      await db.collection("trades").doc(editing).update({name, code, date, pnl});
+      endEdit(); msg.innerHTML=""; const s=document.createElement("span"); s.className=cls(pnl); s.textContent=`已儲存 ${name}(${code}) ${signed(pnl)}`; msg.appendChild(s); return;
+    }
+    await db.collection("trades").add({name, code, date, pnl, created: Date.now()});
+    msg.innerHTML = ""; const s=document.createElement("span"); s.className=cls(pnl); s.textContent=`已新增 ${name}(${code}) ${signed(pnl)}`; msg.appendChild(s);
+    $("f-name").value=""; $("f-code").value=""; $("f-pnl").value=""; $("f-name").focus();
+  } catch(err){
+    if (err && err.code==="invalid_argument"){ canWrite=false; msg.textContent="你沒有編輯權限，只能查看。"; render(); }
+    else msg.textContent = "儲存失敗，請稍後再試。";
+  } finally { $("f-submit").disabled = false; }
+});
+
+(async ()=>{
+  db = await GH.connect("trades", t => `${t.name||""}(${t.code||""}) ${t.date||""} ${t.pnl??""}`);
+  if (!db){ $("status").textContent = "尚未連線 GitHub"; $("rows").innerHTML='<tr><td colspan="6" class="empty">請在上方「GitHub 連線設定」貼上權杖後，就會載入資料。</td></tr>'; return; }
+  const user = null;
+  if (user){ try { const c = await user.can("data.write"); if (c === false){ canWrite=false; $("f-submit").disabled=true; $("formmsg").textContent="你只有檢視權限。"; } } catch(e){} }
+  const timer = setTimeout(()=>{ $("status").textContent = "資料暫時無法連線，顯示內容可能不是最新"; }, 10000);
+  db.collection("trades").onSnapshot(snap=>{
+    if (!snap.metadata.fromCache){ clearTimeout(timer); $("status").textContent = "已連線 GitHub · 每次修改會直接存回倉庫"; }
+    trades = snap.docs.map(d=>({id:d.id, ...d.data()})).filter(t=>typeof t.pnl==="number" && typeof t.date==="string");
+    render();
+  }, err=>{ clearTimeout(timer); $("status").textContent = "資料連線中斷，請重新整理頁面"; });
+})();
+</script>
+
+</body></html>
