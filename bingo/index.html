@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>實固春酒幸運賓果</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Noto+Serif+TC:wght@700;900&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<style>
+:root{
+  /* 單一主題：春酒紅金。版面：同仁＝手機直式一張卡；主持人＝16:9 投影，左邊大號碼、右邊 75 號總表 */
+  --lacquer:#8a141c;
+  --lacquer-deep:#4c070c;
+  --paper:#fff7e8;
+  --ink:#2b1810;
+  --seal:#c4161c;
+  --gold:#f0bd52;
+  --gold-soft:#f8e2ad;
+  --muted:#7d5e4c;
+  --line:#e3cfb2;
+  --ok:#1d7346;
+  --ok-soft:#7fd6a4;
+  --warn:#a8600b;
+  --font-display:"Noto Serif TC","Songti TC","PMingLiU","MingLiU",serif;
+  --font-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",sans-serif;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background-color:var(--lacquer-deep);
+  background-image:radial-gradient(120% 70% at 50% 0%, var(--lacquer) 0%, var(--lacquer-deep) 75%);
+  background-attachment:fixed;
+  color:var(--paper);
+  font-family:var(--font-body);
+  -webkit-text-size-adjust:100%;
+}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,a:focus-visible,label:focus-within{outline:3px solid var(--gold);outline-offset:2px}
+.hidden{display:none !important}
+a{color:var(--gold-soft)}
+
+/* ---------- 同仁：手機 ---------- */
+.player{max-width:520px;margin:0 auto;padding:20px 14px 36px;display:flex;flex-direction:column;gap:16px}
+.brand{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}
+.brand small{font-size:15px;letter-spacing:.4em;color:var(--gold-soft);padding-left:.4em}
+.brand h1{margin:0;font-family:var(--font-display);font-weight:900;font-size:clamp(32px,9.5vw,44px);color:var(--gold);letter-spacing:.08em;text-wrap:balance}
+.sheet{background:var(--paper);color:var(--ink);border-radius:16px;padding:20px 16px;box-shadow:0 10px 30px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:16px}
+.sheet h2{margin:0;font-family:var(--font-display);font-size:24px;font-weight:900;color:var(--seal)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:19px;font-weight:700}
+.field input{font-size:26px;padding:12px 14px;border:2px solid #d4bc9c;border-radius:10px;background:#fff;color:var(--ink);font-family:inherit;width:100%;letter-spacing:.04em}
+.field .hint{font-size:15px;color:var(--muted);line-height:1.5}
+.err{color:var(--seal);font-weight:700;font-size:17px;min-height:1.4em;margin:-6px 0 0}
+.btn-primary{background:var(--seal);color:#fff;border:0;border-radius:12px;font-size:22px;font-weight:900;padding:16px;letter-spacing:.12em;width:100%}
+.btn-primary:active{filter:brightness(.92)}
+.btn-ghost{background:transparent;border:2px solid #d4bc9c;color:var(--ink);border-radius:12px;font-size:20px;font-weight:700;padding:14px;width:100%}
+.rules{margin:0;padding-left:1.3em;font-size:18px;line-height:1.75}
+.rules b{color:var(--seal)}
+.footer-links{display:flex;justify-content:center;gap:18px;font-size:15px;color:rgba(248,226,173,.7)}
+.linkbtn{background:none;border:0;color:inherit;font-size:inherit;text-decoration:underline;text-underline-offset:3px;padding:6px}
+
+.who{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.who .name{font-size:22px;font-weight:900;color:var(--paper)}
+.who .idtag{font-size:16px;color:var(--gold-soft)}
+.who .idtag b{font-size:24px;color:var(--gold);font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.sync{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;color:var(--gold-soft)}
+.sync::before{content:"";width:12px;height:12px;border-radius:50%;background:#9b8577;flex:0 0 auto}
+.sync.live{color:var(--ok-soft)}
+.sync.live::before{background:#3ccf7d;box-shadow:0 0 0 4px rgba(60,207,125,.25)}
+.sync.wait::before{background:var(--gold)}
+.latest{display:flex;align-items:center;gap:12px;background:var(--paper);color:var(--ink);border-radius:14px;padding:8px 16px;border:3px solid var(--gold)}
+.latest .lt-label{font-size:16px;font-weight:700;color:var(--muted);line-height:1.2}
+.latest .lt-num{font-size:40px;font-weight:900;color:var(--seal);font-variant-numeric:tabular-nums;line-height:1.1}
+.latest .lt-num .c{font-family:var(--font-display);margin-right:.15em}
+.latest .lt-count{margin-left:auto;font-size:16px;color:var(--muted);font-weight:700;text-align:right}
+.status{display:flex;gap:8px;flex-wrap:wrap}
+.pill{background:rgba(255,247,232,.1);border:1px solid rgba(240,189,82,.5);color:var(--paper);border-radius:999px;padding:6px 14px;font-size:18px;font-weight:700}
+.pill.hot{background:var(--gold);color:var(--lacquer-deep);border-color:var(--gold);font-weight:900}
+.card{background:var(--paper);border-radius:18px;padding:10px;box-shadow:0 12px 30px rgba(0,0,0,.4);border:3px solid var(--gold)}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.colhead{background:var(--seal);color:var(--gold-soft);font-family:var(--font-display);font-weight:900;font-size:clamp(24px,7.4vw,36px);text-align:center;border-radius:9px;padding:3px 0;line-height:1.25}
+.cell{position:relative;aspect-ratio:1;border:2px solid var(--line);background:#fffdf8;border-radius:10px;color:var(--ink);font-size:clamp(27px,8.8vw,44px);font-weight:900;font-variant-numeric:tabular-nums;display:grid;place-items:center;padding:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .1s;line-height:1}
+.cell:active{transform:scale(.94)}
+.cell span{position:relative;z-index:1}
+.cell.marked{color:#fff;border-color:#e9b8a9}
+.cell.marked::before{content:"";position:absolute;inset:7%;border-radius:50%;background:var(--seal);transform:rotate(var(--rot,0deg));box-shadow:inset 0 0 0 3px rgba(255,255,255,.28),inset 0 0 0 6px var(--seal),inset 0 0 0 7px rgba(255,255,255,.4)}
+.cell.free{background:var(--seal);color:var(--gold);font-family:var(--font-display);border-color:var(--seal);cursor:default}
+.cell.inline{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold),0 0 12px 2px rgba(240,189,82,.7)}
+.cell.stamp::before{animation:stamp .35s ease-out}
+@keyframes stamp{from{transform:scale(1.7) rotate(var(--rot,0deg));opacity:0}to{transform:scale(1) rotate(var(--rot,0deg));opacity:1}}
+.ranges{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;text-align:center;font-size:13px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tool{background:rgba(255,247,232,.1);color:var(--paper);border:1px solid rgba(240,189,82,.55);border-radius:12px;font-size:18px;font-weight:700;padding:13px 8px}
+.tool.go{background:var(--gold);color:var(--lacquer-deep);border-color:var(--gold);font-weight:900}
+.howto{font-size:17px;line-height:1.7;color:var(--gold-soft);margin:0;text-align:center}
+body.big .cell{font-size:clamp(31px,10.4vw,52px)}
+body.big .grid{gap:4px}
+body.big .card{padding:6px}
+body.big .pill{font-size:21px}
+body.big .who .name{font-size:26px}
+body.big .latest .lt-num{font-size:48px}
+
+/* ---------- 對話框 ---------- */
+.overlay{position:fixed;inset:0;background:rgba(32,4,7,.8);display:grid;place-items:center;padding:16px;z-index:50;overflow:auto}
+.dialog{position:relative;background:var(--paper);color:var(--ink);border-radius:18px;padding:24px 20px;max-width:440px;width:100%;display:flex;flex-direction:column;gap:14px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.55)}
+.dialog h2{margin:0;font-family:var(--font-display);font-weight:900;font-size:28px;color:var(--seal)}
+.dialog p{margin:0;font-size:19px;line-height:1.6}
+.dialog .row{display:flex;gap:10px}
+.dialog .row > *{flex:1}
+.bingo-title{font-family:var(--font-display);font-weight:900;font-size:clamp(72px,24vw,120px);color:var(--seal);letter-spacing:.04em;line-height:1}
+.idbox{background:var(--lacquer);color:var(--gold);border-radius:12px;padding:12px 10px;font-size:clamp(34px,11vw,48px);font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:.06em;word-break:break-all}
+.idbox small{display:block;font-size:15px;color:var(--gold-soft);letter-spacing:.2em;font-weight:700}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
+
+/* ---------- 主持人：投影 ---------- */
+body.host-mode{overflow:hidden}
+body.host-mode #app{height:100%}
+#view-host{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:clamp(8px,1.8vh,20px);padding:clamp(10px,2.2vh,26px) clamp(14px,2vw,34px)}
+.h-top{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.h-brand{font-family:var(--font-display);font-weight:900;font-size:clamp(20px,2.5vw,44px);color:var(--gold);letter-spacing:.08em;white-space:nowrap}
+.h-brand small{font-family:var(--font-body);font-size:.45em;color:var(--gold-soft);letter-spacing:.3em;display:block;font-weight:700}
+.h-round{background:var(--gold);color:var(--lacquer-deep);font-weight:900;font-size:clamp(16px,1.9vw,32px);padding:.3em 1.1em;border-radius:999px;border:0;letter-spacing:.05em}
+.h-count{font-size:clamp(14px,1.4vw,24px);color:var(--gold-soft);white-space:nowrap;text-align:right;line-height:1.35}
+.h-count b{font-size:1.7em;color:var(--paper);font-variant-numeric:tabular-nums}
+.h-count .phones{display:block;font-size:.8em}
+.h-count .phones b{font-size:1.25em}
+.h-main{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,6fr);gap:clamp(14px,2.4vw,44px);min-height:0}
+.h-ballwrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,2vh,22px);min-height:0}
+.ball{width:min(32vw,54vh);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 36% 30%,#e3313a 0%,var(--seal) 52%,#850c11 100%);border:clamp(6px,1.1vh,14px) solid var(--gold);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5vh;box-shadow:0 0 0 clamp(4px,.8vh,10px) rgba(240,189,82,.22),0 24px 60px rgba(0,0,0,.5)}
+.ball-col{font-family:var(--font-display);font-weight:900;color:var(--gold);font-size:min(6.6vw,11.5vh);line-height:1}
+.ball-num{font-weight:900;color:#fff;font-size:min(14vw,25vh);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.ball.idle .ball-num{font-size:min(4.4vw,8vh);letter-spacing:.1em;font-family:var(--font-display)}
+.ball.rolling .ball-num{opacity:.75}
+.ball.land{animation:land .5s cubic-bezier(.2,1.5,.4,1)}
+@keyframes land{from{transform:scale(.72)}to{transform:scale(1)}}
+.luck{font-family:var(--font-display);font-weight:900;color:var(--gold-soft);font-size:min(2.8vw,5vh);min-height:1.3em;letter-spacing:.15em;text-align:center}
+.recent{display:flex;gap:10px;align-items:center;flex-wrap:nowrap;overflow:hidden;justify-content:center;color:var(--gold-soft);font-size:min(1.4vw,2.6vh);min-height:2.2em}
+.recent > span:first-child{white-space:nowrap}
+.recent .chip{white-space:nowrap;flex-shrink:0;background:rgba(255,247,232,.1);border:1px solid rgba(240,189,82,.5);border-radius:999px;padding:.15em .75em;color:var(--paper);font-weight:700;font-size:min(1.6vw,3.2vh);font-variant-numeric:tabular-nums}
+.board{display:grid;grid-template-rows:repeat(5,minmax(0,1fr));gap:clamp(5px,1.1vh,12px);min-height:0}
+.brow{display:grid;grid-template-columns:minmax(0,1.25fr) repeat(15,minmax(0,1fr));gap:clamp(3px,.38vw,8px)}
+.blabel{background:var(--seal);color:var(--gold);font-family:var(--font-display);font-weight:900;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:min(2.6vw,5.2vh);line-height:1}
+.blabel small{font-family:var(--font-body);font-size:.36em;color:var(--gold-soft);margin-top:.35em;font-weight:700;font-variant-numeric:tabular-nums}
+.bnum{border-radius:8px;border:1px solid rgba(240,189,82,.22);color:rgba(255,247,232,.32);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:min(1.75vw,3.6vh);font-variant-numeric:tabular-nums}
+.bnum.on{background:var(--gold);color:var(--lacquer-deep);border-color:var(--gold);font-weight:900}
+.bnum.last{background:#fff;color:var(--seal);border-color:#fff;box-shadow:0 0 0 3px var(--gold),0 0 22px 6px rgba(240,189,82,.8)}
+.h-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.hbtn{background:rgba(255,247,232,.08);color:var(--paper);border:1px solid rgba(240,189,82,.5);border-radius:10px;padding:10px 16px;font-size:clamp(14px,1.1vw,18px);font-weight:700}
+.hbtn:hover{background:rgba(255,247,232,.16)}
+.hbtn.draw{background:var(--gold);color:var(--lacquer-deep);border-color:var(--gold);font-size:clamp(18px,1.7vw,28px);font-weight:900;padding:12px 30px;letter-spacing:.08em}
+.hbtn.draw:hover{filter:brightness(1.05)}
+.hbtn:disabled{opacity:.45;cursor:not-allowed}
+.hbtn .kbd{font-size:.7em;opacity:.75;font-weight:700;margin-left:.4em}
+.hbtn .badge{display:inline-block;min-width:1.6em;padding:0 .4em;margin-left:.3em;border-radius:999px;background:var(--seal);color:#fff;font-weight:900;text-align:center}
+.hbtn.alert{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}
+.hsync{font-size:clamp(13px,1vw,16px)}
+.spacer{flex:1}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 20px;border-radius:999px;font-size:18px;font-weight:700;z-index:80;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:90vw;text-align:center}
+.bigtoast{position:fixed;left:50%;top:clamp(10px,3vh,30px);transform:translateX(-50%);background:var(--paper);color:var(--seal);border:4px solid var(--gold);padding:.35em 1.1em;border-radius:18px;font-family:var(--font-display);font-weight:900;font-size:clamp(24px,3.2vw,52px);z-index:40;box-shadow:0 16px 40px rgba(0,0,0,.5);white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis}
+
+.dialog.wide{max-width:820px;text-align:left}
+.dialog.wide h2{font-size:26px}
+.vrow{display:flex;gap:10px}
+.vrow input{flex:1;min-width:0;font-size:26px;padding:10px 14px;border:2px solid #d4bc9c;border-radius:10px;font-family:inherit;letter-spacing:.04em;color:var(--ink);background:#fff}
+.vrow button{flex:0 0 auto;width:auto;padding:10px 26px}
+.verdict{border-radius:12px;padding:12px 16px;font-size:21px;font-weight:900}
+.verdict.ok{background:#e3f3e9;color:var(--ok);border:2px solid var(--ok)}
+.verdict.mid{background:#fbefdc;color:var(--warn);border:2px solid var(--warn)}
+.verdict.no{background:#f9e3e1;color:var(--seal);border:2px solid var(--seal)}
+.vbody{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:start}
+.mini{display:grid;grid-template-columns:repeat(5,46px);gap:4px}
+.mini div{height:46px;border-radius:7px;display:grid;place-items:center;font-weight:900;font-size:20px;border:1px solid var(--line);background:#fff;font-variant-numeric:tabular-nums;color:#b9a48f}
+.mini .mh{background:var(--seal);color:var(--gold-soft);font-family:var(--font-display);border-color:var(--seal);height:34px;font-size:18px}
+.mini .on{background:var(--seal);color:#fff;border-color:var(--seal)}
+.mini .fr{background:var(--seal);color:var(--gold);font-family:var(--font-display);border-color:var(--seal)}
+.mini .in{box-shadow:0 0 0 3px var(--gold)}
+.vside{display:flex;flex-direction:column;gap:10px;font-size:17px}
+.note{color:var(--muted);font-size:15px;line-height:1.5}
+.dup{color:var(--warn);font-weight:700}
+.vside input{font-size:20px;padding:9px 12px;border:2px solid #d4bc9c;border-radius:10px;font-family:inherit;color:var(--ink);width:100%}
+.vside .btn-primary{font-size:20px;padding:13px}
+.set-group{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:14px}
+.set-group h3{margin:0;font-size:18px}
+.radio{display:flex;align-items:center;gap:10px;font-size:18px;padding:6px 4px;cursor:pointer}
+.radio input{width:20px;height:20px;accent-color:var(--seal)}
+.set-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.set-row .btn-ghost{width:auto;flex:1 1 200px;font-size:17px;padding:11px}
+.set-row input{flex:1 1 200px;font-size:20px;padding:10px 12px;border:2px solid #d4bc9c;border-radius:10px;font-family:inherit;color:var(--ink);letter-spacing:.06em}
+.set-row .btn-primary{width:auto;font-size:17px;padding:11px 20px;letter-spacing:.05em}
+.danger{color:var(--seal) !important;border-color:#e6b3ac !important}
+.wtable{width:100%;border-collapse:collapse;font-size:17px;font-variant-numeric:tabular-nums}
+.wtable th,.wtable td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+.wtable th{font-size:15px;color:var(--muted);font-weight:700}
+.wtable td:last-child{text-align:right;white-space:nowrap}
+.wtable .okc{color:var(--ok);font-weight:900}
+.wtable .noc{color:var(--seal);font-weight:900}
+.wscroll{max-height:52vh;overflow:auto}
+.wsum{display:flex;gap:8px;flex-wrap:wrap}
+.wsum span{background:#f4e6cf;border-radius:999px;padding:4px 12px;font-size:15px;font-weight:700}
+.xbtn{background:none;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:14px;padding:5px 10px}
+.xbtn.armed{background:var(--seal);color:#fff;border-color:var(--seal)}
+.xbtn.reg{background:var(--seal);color:#fff;border-color:var(--seal);font-weight:900}
+.qrbox{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.qrbox svg{width:min(58vh,80vw);height:auto;background:#fff;border-radius:12px}
+.qrbox .qrtitle{font-family:var(--font-display);font-weight:900;font-size:clamp(26px,3vw,44px);color:var(--seal)}
+.qrbox .url{font-size:18px;word-break:break-all;color:var(--muted)}
+
+@media (max-width:860px){
+  body.host-mode{overflow:auto}
+  body.host-mode #app{height:auto}
+  #view-host{height:auto}
+  .h-main{grid-template-columns:1fr}
+  .ball{width:min(70vw,46vh)}
+  .ball-col{font-size:12vw}.ball-num{font-size:26vw}.ball.idle .ball-num{font-size:8vw}
+  .luck{font-size:6vw}
+  .recent{font-size:3.4vw}.recent .chip{font-size:3.6vw}
+  .board{min-height:320px}
+  .blabel{font-size:5vw}.bnum{font-size:3.2vw}
+  .h-top{flex-wrap:wrap}
+  .vbody{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 同仁：領卡 -->
+  <section id="view-join" class="player hidden" aria-labelledby="joinTitle">
+    <header class="brand">
+      <small>實固集團</small>
+      <h1 id="joinTitle">春酒幸運賓果</h1>
+    </header>
+    <form class="sheet" id="joinForm" novalidate>
+      <h2>領取我的賓果卡</h2>
+      <div class="field">
+        <label for="joinId">員工編號</label>
+        <input id="joinId" name="joinId" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20" placeholder="例如 A1023">
+        <span class="hint">請照識別證上的編號輸入。同一個編號永遠是同一張卡，換手機也一樣。</span>
+      </div>
+      <div class="field">
+        <label for="joinName">姓名或稱呼（可不填）</label>
+        <input id="joinName" name="joinName" autocomplete="off" maxlength="12" placeholder="例如 王大哥">
+      </div>
+      <p class="err" id="joinErr" role="alert"></p>
+      <button type="submit" class="btn-primary">領取賓果卡</button>
+    </form>
+    <section class="sheet" aria-labelledby="rulesTitle">
+      <h2 id="rulesTitle">怎麼玩</h2>
+      <ol class="rules">
+        <li>主持人抽出號碼後，號碼會<b>自動蓋在你的卡上</b>。手機沒連上時，聽到號碼就自己點一下蓋章。</li>
+        <li>橫、直、斜任一排蓋滿 5 格就是<b>一條線</b>，中間的「春」字送你。</li>
+        <li>連線時手機會跳出「賓果！」並自動通知主持人，請<b>舉手</b>讓工作人員確認。</li>
+      </ol>
+    </section>
+    <nav class="footer-links"><button type="button" class="linkbtn" data-action="host-entry">主持人入口</button></nav>
+  </section>
+
+  <!-- 同仁：賓果卡 -->
+  <section id="view-card" class="player hidden" aria-label="我的賓果卡">
+    <header class="brand">
+      <small>實固集團</small>
+      <h1>春酒幸運賓果</h1>
+    </header>
+    <div class="who">
+      <div class="name" id="pName">我的賓果卡</div>
+      <div class="idtag">員工編號 <b id="pId"></b></div>
+    </div>
+    <div class="sync" id="pSync" aria-live="polite">連線中…</div>
+    <div class="latest hidden" id="pLatest" aria-live="polite">
+      <div class="lt-label">最新<br>號碼</div>
+      <div class="lt-num" id="pLatestNum"></div>
+      <div class="lt-count" id="pLatestCount"></div>
+    </div>
+    <div class="status" id="pStatus" aria-live="polite"></div>
+    <div class="card">
+      <div class="grid" id="pGrid"></div>
+      <div class="ranges" aria-hidden="true"><span>1–15</span><span>16–30</span><span>31–45</span><span>46–60</span><span>61–75</span></div>
+    </div>
+    <p class="howto" id="pHow"></p>
+    <div class="tools">
+      <button type="button" class="tool" id="bigBtn" aria-pressed="false">字放大</button>
+      <button type="button" class="tool go" id="showIdBtn">給工作人員看編號</button>
+    </div>
+    <nav class="footer-links">
+      <button type="button" class="linkbtn" id="changeIdBtn">換一個員工編號</button>
+      <button type="button" class="linkbtn" data-action="host-entry">主持人入口</button>
+    </nav>
+  </section>
+
+  <!-- 主持人：投影 -->
+  <section id="view-host" class="hidden" aria-label="主持人抽號畫面">
+    <header class="h-top">
+      <div class="h-brand"><small>實固集團</small>春酒幸運賓果</div>
+      <button type="button" class="h-round" id="hRound" title="切換本輪目標"></button>
+      <div class="h-count">已開出 <b id="hCount">0</b> / 75 號<span class="phones">已連線手機 <b id="hPhones">0</b> 支</span></div>
+    </header>
+    <main class="h-main">
+      <div class="h-ballwrap">
+        <div class="ball idle" id="ball" aria-live="assertive">
+          <span class="ball-col" id="ballCol"></span>
+          <span class="ball-num" id="ballNum">準備開始</span>
+        </div>
+        <div class="luck" id="luck"></div>
+        <div class="recent" id="recent"></div>
+      </div>
+      <div class="board" id="board" aria-label="已開出號碼總表"></div>
+    </main>
+    <footer class="h-controls">
+      <button type="button" class="hbtn draw" id="drawBtn">抽出號碼<span class="kbd">空白鍵</span></button>
+      <button type="button" class="hbtn" id="claimsBtn">喊賓果名單<span class="badge" id="claimBadge">0</span></button>
+      <button type="button" class="hbtn" id="verifyBtn">輸入編號驗證</button>
+      <button type="button" class="hbtn" id="winnersBtn">得獎名單（<span id="wCount">0</span>）</button>
+      <span class="spacer"></span>
+      <span class="sync hsync" id="hSync">連線中…</span>
+      <button type="button" class="hbtn" id="qrBtn">同仁掃碼領卡</button>
+      <button type="button" class="hbtn" id="settingsBtn">設定</button>
+    </footer>
+  </section>
+</div>
+
+<!-- 對話框 -->
+<div class="overlay hidden" id="ovCelebrate" role="dialog" aria-modal="true" aria-labelledby="cTitle">
+  <div class="dialog">
+    <div class="bingo-title" id="cTitle">賓果！</div>
+    <p id="cLine" style="font-size:24px;font-weight:900"></p>
+    <p id="cMsg"></p>
+    <div class="idbox"><small>員工編號</small><span id="cId"></span></div>
+    <button type="button" class="btn-primary" id="cOk">繼續遊戲</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovConfirm" role="dialog" aria-modal="true" aria-labelledby="kTitle">
+  <div class="dialog">
+    <h2 id="kTitle"></h2>
+    <p id="kMsg"></p>
+    <div class="row">
+      <button type="button" class="btn-ghost" id="kCancel"></button>
+      <button type="button" class="btn-primary" id="kOk"></button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovClaims" role="dialog" aria-modal="true" aria-labelledby="clTitle">
+  <div class="dialog wide">
+    <h2 id="clTitle">喊賓果名單</h2>
+    <p class="note" style="font-size:16px">同仁手機連線時會自動出現在這裡。「系統核對」是用你開出的號碼重新核對的結果；「第幾號達成」可以比出誰先連線。</p>
+    <div class="wscroll" id="clList"></div>
+    <div class="row">
+      <button type="button" class="btn-ghost danger" id="clClear">清空名單（換下一輪時）</button>
+      <button type="button" class="btn-primary" data-close="ovClaims">關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovVerify" role="dialog" aria-modal="true" aria-labelledby="vTitle">
+  <div class="dialog wide">
+    <h2 id="vTitle">輸入編號驗證</h2>
+    <form class="vrow" id="vForm" novalidate>
+      <input id="vId" aria-label="員工編號" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20" placeholder="輸入同仁的員工編號">
+      <button type="submit" class="btn-primary">驗證</button>
+    </form>
+    <div id="vResult"></div>
+    <button type="button" class="btn-ghost" data-close="ovVerify">關閉</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovWinners" role="dialog" aria-modal="true" aria-labelledby="wTitle">
+  <div class="dialog wide">
+    <h2 id="wTitle">得獎名單</h2>
+    <div class="wsum" id="wSum"></div>
+    <div class="wscroll" id="wList"></div>
+    <div class="row">
+      <button type="button" class="btn-ghost" id="wCopy">複製名單</button>
+      <button type="button" class="btn-primary" data-close="ovWinners">關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovQR" role="dialog" aria-modal="true" aria-labelledby="qTitle">
+  <div class="dialog wide">
+    <div class="qrbox" id="qBox"></div>
+    <button type="button" class="btn-ghost" data-close="ovQR">關閉</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovSettings" role="dialog" aria-modal="true" aria-labelledby="sTitle">
+  <div class="dialog wide">
+    <h2 id="sTitle">設定</h2>
+    <div class="set-group">
+      <h3>本輪目標</h3>
+      <div id="sRounds"></div>
+    </div>
+    <div class="set-group">
+      <h3>播報</h3>
+      <label class="radio"><input type="checkbox" id="sVoice"> 抽出號碼時用語音唸出來</label>
+      <label class="radio"><input type="checkbox" id="sSound"> 抽出號碼時播放提示音</label>
+    </div>
+    <div class="set-group">
+      <h3>房間代碼</h3>
+      <p class="note" style="font-size:16px;margin:0">同仁掃的 QR Code 裡包含這個代碼。換一台電腦主持時，在新電腦輸入同一個代碼，就能接續目前的號碼。</p>
+      <div class="set-row">
+        <input id="sRoom" maxlength="16" autocomplete="off" spellcheck="false" aria-label="房間代碼">
+        <button type="button" class="btn-primary" id="sRoomSave">使用這個代碼</button>
+      </div>
+    </div>
+    <div class="set-group">
+      <h3>號碼與名單</h3>
+      <div class="set-row">
+        <button type="button" class="btn-ghost" id="sUndo">收回最後一個號碼</button>
+        <button type="button" class="btn-ghost danger" id="sReset">開新局（清除所有號碼）</button>
+        <button type="button" class="btn-ghost danger" id="sClearW">清除得獎名單</button>
+      </div>
+    </div>
+    <div class="row">
+      <button type="button" class="btn-ghost" id="sExit">回到同仁賓果卡畫面</button>
+      <button type="button" class="btn-primary" data-close="ovSettings">完成</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="confetti" class="hidden"></canvas>
+
+<script>
+(function(){
+'use strict';
+
+/* ===== 共用：卡片產生與連線判定（同仁端與主持人端用同一套） ===== */
+var COLS=['福','祿','壽','喜','財'];
+var LUCK={1:'一帆風順',3:'三陽開泰',4:'四季平安',5:'五福臨門',6:'六六大順',8:'八方來財',9:'長長久久',10:'十全十美',18:'要發',44:'事事如意',52:'我愛實固',58:'我發',66:'順順利利'};
+var ROUNDS=[
+  {id:'r1',label:'第一輪・開胃一條線',short:'第一輪 開胃一條線',need:1},
+  {id:'r2',label:'第二輪・雙喜臨門（兩條線）',short:'第二輪 雙喜臨門',need:2},
+  {id:'r3',label:'第三輪・福氣到底（一條線，人人有獎）',short:'第三輪 福氣到底',need:1},
+  {id:'r4',label:'加碼・全卡蓋滿',short:'加碼 全卡蓋滿',need:12}
+];
+/* 免費、免登入的公開即時轉送服務；兩家同時連，任何一家通就能同步 */
+var BROKERS=[
+  {name:'EMQX',url:'wss://broker.emqx.io:8084/mqtt'},
+  {name:'HiveMQ',url:'wss://broker.hivemq.com:8884/mqtt'}
+];
+var TOPIC_ROOT='shigu-chunjiu-bingo/v1/';
+function colOf(n){return COLS[Math.floor((n-1)/15)];}
+function roundById(id){for(var i=0;i<ROUNDS.length;i++){if(ROUNDS[i].id===id)return ROUNDS[i];}return ROUNDS[0];}
+
+function normId(s){
+  return String(s||'')
+    .replace(/[！-～]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);})
+    .replace(/[\s　]+/g,'')
+    .toUpperCase().slice(0,20);
+}
+function normRoom(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,16);}
+function seed32(str){
+  var h=2166136261>>>0;
+  for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
+  h^=h>>>16;h=Math.imul(h,0x85ebca6b)>>>0;h^=h>>>13;h=Math.imul(h,0xc2b2ae35)>>>0;h^=h>>>16;
+  return h>>>0;
+}
+function mulberry32(a){
+  return function(){a=(a+0x6D2B79F5)|0;var t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};
+}
+function makeCard(id){
+  var rnd=mulberry32(seed32('SHIGU-CHUNJIU-BINGO|'+id));
+  var cols=[];
+  for(var c=0;c<5;c++){
+    var pool=[];for(var n=c*15+1;n<=c*15+15;n++)pool.push(n);
+    for(var i=pool.length-1;i>0;i--){var j=Math.floor(rnd()*(i+1));var t=pool[i];pool[i]=pool[j];pool[j]=t;}
+    var take=pool.slice(0,c===2?4:5).sort(function(a,b){return a-b;});
+    if(c===2)take.splice(2,0,0);
+    cols.push(take);
+  }
+  var g=[];
+  for(var r=0;r<5;r++){g.push([]);for(var c2=0;c2<5;c2++)g[r].push(cols[c2][r]);}
+  return g;
+}
+var LINES=(function(){
+  var L=[],i,k;
+  for(i=0;i<5;i++){var row=[],col=[];for(k=0;k<5;k++){row.push([i,k]);col.push([k,i]);}L.push(row);L.push(col);}
+  var d1=[],d2=[];for(k=0;k<5;k++){d1.push([k,k]);d2.push([k,4-k]);}L.push(d1);L.push(d2);
+  return L;
+})();
+function analyze(card,has){
+  var lines=0,bestOpen=5,inLine={};
+  for(var i=0;i<LINES.length;i++){
+    var miss=0,L=LINES[i];
+    for(var k=0;k<5;k++){var n=card[L[k][0]][L[k][1]];if(!(n===0||has(n)))miss++;}
+    if(miss===0){lines++;for(k=0;k<5;k++)inLine[L[k][0]*5+L[k][1]]=true;}
+    else if(miss<bestOpen)bestOpen=miss;
+  }
+  return {lines:lines,bestOpen:bestOpen,inLine:inLine};
+}
+/* 開到第幾號時，這張卡第一次達到 need 條線（0 = 還沒達到） */
+function reachAt(card,drawn,need){
+  var seen={};
+  for(var k=0;k<drawn.length;k++){
+    seen[drawn[k]]=true;
+    if(analyze(card,function(n){return !!seen[n];}).lines>=need)return k+1;
+  }
+  return 0;
+}
+function validDrawn(a){
+  if(!Array.isArray(a)||a.length>75)return null;
+  var seen={},out=[];
+  for(var i=0;i<a.length;i++){var n=a[i];if(typeof n!=='number'||n%1!==0||n<1||n>75||seen[n])return null;seen[n]=1;out.push(n);}
+  return out;
+}
+window.__bingo={makeCard:makeCard,analyze:analyze,normId:normId,reachAt:reachAt};
+
+/* ===== 小工具 ===== */
+function $(s){return document.querySelector(s);}
+var store={
+  get:function(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
+  set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+};
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function rid(n){var a=new Uint32Array(n),s='',ch='abcdefghjkmnpqrstuvwxyz23456789';crypto.getRandomValues(a);for(var i=0;i<n;i++)s+=ch.charAt(a[i]%ch.length);return s;}
+function openOv(id){$('#'+id).classList.remove('hidden');}
+function closeOv(id){$('#'+id).classList.add('hidden');}
+function anyOpen(){return !!document.querySelector('.overlay:not(.hidden)');}
+document.addEventListener('click',function(e){
+  var c=e.target.closest('[data-close]');if(c){closeOv(c.getAttribute('data-close'));}
+  var h=e.target.closest('[data-action="host-entry"]');
+  if(h){confirmBox('主持人入口','這是主持人投影抽號用的畫面。一般同仁請按「返回」。','返回','進入主持人畫面',function(){location.hash='host';});}
+});
+var kOk=null;
+function confirmBox(title,msg,cancelText,okText,onOk){
+  $('#kTitle').textContent=title;$('#kMsg').textContent=msg;
+  $('#kCancel').textContent=cancelText;$('#kOk').textContent=okText;
+  kOk=onOk;openOv('ovConfirm');$('#kCancel').focus();
+}
+$('#kCancel').addEventListener('click',function(){kOk=null;closeOv('ovConfirm');});
+$('#kOk').addEventListener('click',function(){var f=kOk;kOk=null;closeOv('ovConfirm');if(f)f();});
+var toastTimer=null;
+function toast(msg){
+  var t=document.querySelector('.toast');
+  if(!t){t=document.createElement('div');t.className='toast';t.setAttribute('role','status');document.body.appendChild(t);}
+  t.textContent=msg;t.classList.remove('hidden');
+  clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.add('hidden');},2400);
+}
+
+/* ===== 即時同步（MQTT over WebSocket） ===== */
+var net={role:'',room:'',clients:[],gotState:false};
+function netUp(){for(var i=0;i<net.clients.length;i++){if(net.clients[i].up)return true;}return false;}
+function stopNet(){
+  net.clients.forEach(function(e){try{e.client.end(true);}catch(err){}});
+  net.clients=[];net.role='';net.room='';net.gotState=false;
+}
+function startNet(role,room){
+  if(net.role===role&&net.room===room&&net.clients.length)return;
+  stopNet();
+  net.role=role;net.room=room;
+  if(!room||typeof window.mqtt==='undefined'||!window.mqtt||typeof window.mqtt.connect!=='function'){syncChanged();return;}
+  var base=TOPIC_ROOT+room;
+  BROKERS.forEach(function(b){
+    var c;
+    try{c=window.mqtt.connect(b.url,{clientId:'sg'+role.charAt(0)+rid(10),clean:true,keepalive:30,reconnectPeriod:4000,connectTimeout:8000});}catch(err){return;}
+    var entry={name:b.name,client:c,up:false};
+    net.clients.push(entry);
+    c.on('connect',function(){
+      entry.up=true;syncChanged();
+      if(role==='player'){
+        c.subscribe(base+'/state',{qos:0});
+        sendHello(entry);
+      }else{
+        c.subscribe([base+'/state',base+'/claim',base+'/hello'],{qos:0});
+        setTimeout(function(){publishState(entry);},1500);
+      }
+    });
+    c.on('close',function(){if(entry.up){entry.up=false;syncChanged();}});
+    c.on('offline',function(){if(entry.up){entry.up=false;syncChanged();}});
+    c.on('error',function(){});
+    c.on('message',function(topic,payload){
+      if(net.room!==room)return;
+      var txt,msg;
+      try{txt=typeof payload==='string'?payload:new TextDecoder().decode(payload);msg=JSON.parse(txt);}catch(err){return;}
+      if(!msg||msg.v!==1)return;
+      if(topic===base+'/state'){if(role==='player')onState(msg);else onHostEcho(msg);}
+      else if(role==='host'&&topic===base+'/claim')onClaim(msg);
+      else if(role==='host'&&topic===base+'/hello')onHello(msg);
+    });
+  });
+  syncChanged();
+}
+function publish(sub,obj,retain,only){
+  if(!net.room)return;
+  var s=JSON.stringify(obj),t=TOPIC_ROOT+net.room+'/'+sub;
+  net.clients.forEach(function(e){if(e.up&&(!only||only===e)){try{e.client.publish(t,s,{qos:0,retain:!!retain});}catch(err){}}});
+}
+function syncChanged(){
+  if(net.role==='player')renderSyncPlayer();
+  else if(net.role==='host')renderSyncHost();
+}
+
+/* ===== 同仁端 ===== */
+var P=store.get('sg-bingo-player',null)||{};
+if(!Array.isArray(P.marks))P.marks=[];
+if(!Array.isArray(P.drawn))P.drawn=[];
+P.celebrated=P.celebrated||0;
+(function(){
+  var r='';
+  try{r=normRoom(new URLSearchParams(location.search).get('r'));}catch(e){}
+  if(r&&r!==P.room){P.room=r;P.drawn=[];P.game='';}
+})();
+function saveP(){store.set('sg-bingo-player',P);}
+var wakeLock=null;
+function keepAwake(){
+  try{if(navigator.wakeLock&&!wakeLock){navigator.wakeLock.request('screen').then(function(l){wakeLock=l;l.addEventListener('release',function(){wakeLock=null;});}).catch(function(){});}}catch(e){}
+}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&P.id&&location.hash!=='#host')keepAwake();});
+
+function autoMode(){return netUp()&&net.gotState;}
+function cardSets(card){
+  var drawnMap={},marks={};
+  P.drawn.forEach(function(n){drawnMap[n]=true;});
+  P.marks.forEach(function(n){marks[n]=true;});
+  return {drawnMap:drawnMap,has:function(n){return !!drawnMap[n]||!!marks[n];}};
+}
+function showJoin(){
+  $('#view-join').classList.remove('hidden');$('#view-card').classList.add('hidden');
+  $('#joinId').value='';$('#joinName').value=P.name||'';$('#joinErr').textContent='';
+}
+$('#joinForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  var id=normId($('#joinId').value);
+  if(!id){$('#joinErr').textContent='請輸入員工編號';$('#joinId').focus();return;}
+  var name=$('#joinName').value.trim().slice(0,12);
+  if(P.id!==id){P.marks=[];P.celebrated=0;}
+  P.id=id;P.name=name;saveP();
+  renderPlayer();window.scrollTo(0,0);
+  net.clients.forEach(function(en){if(en.up)sendHello(en);});
+  checkLines(false);
+});
+
+var stampSet={};
+function renderCard(){
+  var card=makeCard(P.id),S=cardSets(card);
+  var a=analyze(card,S.has);
+  $('#pName').textContent=P.name?P.name+' 的賓果卡':'我的賓果卡';
+  $('#pId').textContent=P.id;
+  var html='';
+  COLS.forEach(function(ch){html+='<div class="colhead" aria-hidden="true">'+ch+'</div>';});
+  for(var r=0;r<5;r++)for(var c=0;c<5;c++){
+    var n=card[r][c],inl=a.inLine[r*5+c]?' inline':'';
+    if(n===0){html+='<button type="button" class="cell free'+inl+'" aria-label="中間免費格：春" tabindex="-1"><span>春</span></button>';continue;}
+    var m=S.has(n),cls='cell'+(m?' marked':'')+(m&&stampSet[n]?' stamp':'');
+    var rot=((n*37)%24)-12;
+    html+='<button type="button" class="'+cls+inl+'" data-n="'+n+'" style="--rot:'+rot+'deg" aria-pressed="'+m+'" aria-label="'+colOf(n)+' '+n+(m?' 已蓋章':'')+'"><span>'+n+'</span></button>';
+  }
+  $('#pGrid').innerHTML=html;
+  stampSet={};
+  var marked=0;card.forEach(function(row){row.forEach(function(n){if(n&&S.has(n))marked++;});});
+  var st='<span class="pill">已蓋 '+marked+' 格</span>';
+  if(a.lines>0)st+='<span class="pill hot">已連線 '+a.lines+' 條</span>';
+  else if(a.bestOpen===1)st+='<span class="pill hot">聽牌！再 1 格就連線</span>';
+  else st+='<span class="pill">最快再 '+a.bestOpen+' 格連線</span>';
+  $('#pStatus').innerHTML=st;
+  $('#showIdBtn').textContent=a.lines>0?'我連線了！':'給工作人員看編號';
+  document.body.classList.toggle('big',!!P.big);
+  $('#bigBtn').setAttribute('aria-pressed',P.big?'true':'false');
+  $('#bigBtn').textContent=P.big?'字恢復一般':'字放大';
+  renderLatest();
+  return a;
+}
+function renderLatest(){
+  var box=$('#pLatest');
+  if(!net.gotState||!P.drawn.length){box.classList.add('hidden');return;}
+  var n=P.drawn[P.drawn.length-1];
+  box.classList.remove('hidden');
+  $('#pLatestNum').innerHTML='<span class="c">'+colOf(n)+'</span>'+n;
+  $('#pLatestCount').textContent='已開出 '+P.drawn.length+' 號';
+}
+function renderSyncPlayer(){
+  var el=$('#pSync');if(!el)return;
+  el.className='sync';
+  if(!P.room){el.textContent='沒有連到主持人：聽到號碼請自己點一下蓋章';$('#pHow').textContent='聽到號碼點一下蓋章，點錯再點一次取消。';return;}
+  if(autoMode()){el.classList.add('live');el.textContent='已連上主持人，號碼會自動蓋章';$('#pHow').textContent='不用點，主持人抽出的號碼會自動蓋上。';}
+  else if(netUp()){el.classList.add('wait');el.textContent='已連線，等主持人開始抽號…';$('#pHow').textContent='主持人開始抽號後，號碼會自動蓋上。';}
+  else{el.classList.add('wait');el.textContent='連線中…連不上時請聽號碼自己點';$('#pHow').textContent='聽到號碼點一下蓋章，點錯再點一次取消。';}
+  if(P.id&&!$('#view-card').classList.contains('hidden'))renderLatest();
+}
+function renderPlayer(){
+  document.body.classList.remove('host-mode');
+  $('#view-host').classList.add('hidden');
+  startNet('player',P.room||'');
+  if(!P.id){showJoin();return;}
+  $('#view-join').classList.add('hidden');$('#view-card').classList.remove('hidden');
+  renderCard();renderSyncPlayer();keepAwake();
+}
+function sendHello(entry){
+  if(!P.id)return;
+  publish('hello',{v:1,id:P.id,name:P.name||'',t:Date.now()},false,entry);
+}
+setInterval(function(){if(net.role==='player'&&P.id)publish('hello',{v:1,id:P.id,name:P.name||'',t:Date.now()},false);},60000);
+
+function onState(m){
+  var d=validDrawn(m.drawn);if(!d)return;
+  var g=String(m.game||'').slice(0,24),t=+m.t||0;
+  if(P.game===g&&t<(P.stateT||0))return;
+  if(P.game!==g){P.game=g;P.marks=[];P.celebrated=0;}
+  var prev={};P.drawn.forEach(function(n){prev[n]=true;});
+  P.drawn=d;P.stateT=t;
+  var first=!net.gotState;net.gotState=true;
+  saveP();
+  if(P.id&&!$('#view-card').classList.contains('hidden')){
+    d.forEach(function(n){if(!prev[n])stampSet[n]=true;});
+    renderCard();
+    if(!first){
+      var last=d[d.length-1];
+      var card=makeCard(P.id),onCard=false;
+      card.forEach(function(row){if(row.indexOf(last)>=0)onCard=true;});
+      if(last&&!prev[last]&&onCard){try{if(navigator.vibrate)navigator.vibrate([60,40,60]);}catch(e){}}
+    }
+    checkLines(true);
+  }
+  renderSyncPlayer();
+}
+function checkLines(party){
+  if(!P.id)return;
+  var card=makeCard(P.id),S=cardSets(card),a=analyze(card,S.has);
+  if(a.lines>P.celebrated){
+    P.celebrated=a.lines;saveP();
+    if(netUp())publish('claim',{v:1,id:P.id,name:P.name||'',lines:a.lines,t:Date.now()},false);
+    try{if(navigator.vibrate)navigator.vibrate([120,60,120,60,240]);}catch(err){}
+    showCelebrate(a.lines,party!==false);
+  }else if(a.lines<P.celebrated){P.celebrated=a.lines;saveP();}
+}
+$('#pGrid').addEventListener('click',function(e){
+  var b=e.target.closest('.cell[data-n]');if(!b)return;
+  var n=+b.getAttribute('data-n');
+  if(P.drawn.indexOf(n)>=0){toast('「'+colOf(n)+' '+n+'」主持人已開出，自動蓋好了');return;}
+  if(autoMode()){toast('這個號碼還沒開出，開出時會自動蓋章');return;}
+  var idx=P.marks.indexOf(n);
+  if(idx>=0){
+    confirmBox('取消蓋章？','要把「'+colOf(n)+' '+n+'」的章取消嗎？','保留','取消這格',function(){
+      var i=P.marks.indexOf(n);if(i>=0)P.marks.splice(i,1);
+      saveP();renderCard();checkLines(false);
+    });
+    return;
+  }
+  P.marks.push(n);stampSet[n]=true;saveP();
+  try{if(navigator.vibrate)navigator.vibrate(35);}catch(err){}
+  renderCard();checkLines(true);
+});
+function showCelebrate(lines,party){
+  var sent=netUp();
+  $('#cTitle').textContent=lines>0?'賓果！':'我的編號';
+  $('#cLine').textContent=lines>0?('已連線 '+lines+' 條'):'目前還沒連線，繼續加油';
+  $('#cMsg').textContent=lines>0?(sent?'已自動通知主持人。請舉手，讓工作人員確認':'請舉手，讓工作人員用員工編號幫你確認'):'工作人員會用這個編號查你的卡';
+  $('#cId').textContent=P.id;
+  openOv('ovCelebrate');$('#cOk').focus();
+  if(party)confetti();
+}
+$('#cOk').addEventListener('click',function(){closeOv('ovCelebrate');});
+$('#showIdBtn').addEventListener('click',function(){
+  var card=makeCard(P.id),S=cardSets(card),a=analyze(card,S.has);
+  if(a.lines>0&&netUp())publish('claim',{v:1,id:P.id,name:P.name||'',lines:a.lines,t:Date.now()},false);
+  showCelebrate(a.lines,false);
+});
+$('#bigBtn').addEventListener('click',function(){P.big=!P.big;saveP();renderCard();});
+$('#changeIdBtn').addEventListener('click',function(){
+  confirmBox('換一個員工編號？','換編號會換成另一張卡，你自己蓋的章會清除。','不要換','確定換編號',function(){P.id='';P.marks=[];P.celebrated=0;saveP();renderPlayer();});
+});
+
+function confetti(){
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var cv=$('#confetti'),ctx=cv.getContext('2d');if(!ctx)return;
+  cv.classList.remove('hidden');
+  var W=cv.width=innerWidth,Hh=cv.height=innerHeight,colors=['#f0bd52','#f8e2ad','#c4161c','#fff7e8'],ps=[];
+  for(var i=0;i<90;i++)ps.push({x:Math.random()*W,y:-20-Math.random()*Hh*.5,vx:(Math.random()-.5)*2.4,vy:2+Math.random()*3.5,r:Math.random()*6.28,vr:(Math.random()-.5)*.3,s:6+Math.random()*8,c:colors[i%4]});
+  var t0=performance.now();
+  (function step(t){
+    ctx.clearRect(0,0,W,Hh);
+    ps.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);ctx.restore();});
+    if(t-t0<2600)requestAnimationFrame(step);else{ctx.clearRect(0,0,W,Hh);cv.classList.add('hidden');}
+  })(t0);
+}
+
+/* ===== 主持人端 ===== */
+var H=store.get('sg-bingo-host',null)||{};
+if(!Array.isArray(H.drawn))H.drawn=[];
+if(!H.round)H.round='r1';
+if(!Array.isArray(H.winners))H.winners=[];
+if(!Array.isArray(H.claims))H.claims=[];
+if(typeof H.voice!=='boolean')H.voice=true;
+if(typeof H.sound!=='boolean')H.sound=true;
+if(!H.room)H.room=rid(6);
+if(!H.game)H.game=rid(8);
+H.seenClaims=H.seenClaims||0;
+function saveH(){store.set('sg-bingo-host',H);}
+saveH();
+var rolling=false,boardBuilt=false,seen={},adoptChecked=false;
+
+function buildBoard(){
+  var html='';
+  for(var c=0;c<5;c++){
+    html+='<div class="brow"><div class="blabel">'+COLS[c]+'<small>'+(c*15+1)+'–'+(c*15+15)+'</small></div>';
+    for(var n=c*15+1;n<=c*15+15;n++)html+='<div class="bnum" id="b'+n+'">'+n+'</div>';
+    html+='</div>';
+  }
+  $('#board').innerHTML=html;boardBuilt=true;
+}
+function setBall(n,idleText){
+  var ball=$('#ball');
+  if(n){ball.classList.remove('idle');$('#ballCol').textContent=colOf(n);$('#ballNum').textContent=n;}
+  else{ball.classList.add('idle');$('#ballCol').textContent='';$('#ballNum').textContent=idleText||'準備開始';}
+}
+function renderHost(landed){
+  document.body.classList.add('host-mode');
+  $('#view-join').classList.add('hidden');$('#view-card').classList.add('hidden');$('#view-host').classList.remove('hidden');
+  if(!boardBuilt)buildBoard();
+  var R=roundById(H.round);
+  $('#hRound').textContent=R.label;
+  $('#hCount').textContent=H.drawn.length;
+  var drawnMap={};H.drawn.forEach(function(n){drawnMap[n]=true;});
+  var last=H.drawn.length?H.drawn[H.drawn.length-1]:0;
+  for(var n=1;n<=75;n++){var el=$('#b'+n);el.className='bnum'+(drawnMap[n]?' on':'')+(n===last?' last':'');}
+  if(!rolling){
+    if(last){setBall(last);$('#luck').textContent=LUCK[last]||'';}
+    else{setBall(0,'準備開始');$('#luck').textContent='按「抽出號碼」或空白鍵開始';}
+    if(landed){var b=$('#ball');b.classList.remove('land');void b.offsetWidth;b.classList.add('land');}
+  }
+  var rec=H.drawn.slice(0,-1).slice(-4).reverse();
+  $('#recent').innerHTML=rec.length?('<span>前幾號</span>'+rec.map(function(n){return '<span class="chip">'+colOf(n)+' '+n+'</span>';}).join('')):'';
+  $('#drawBtn').disabled=rolling||H.drawn.length>=75;
+  $('#drawBtn').firstChild.textContent=H.drawn.length>=75?'75 號已全部開出':'抽出號碼';
+  $('#wCount').textContent=H.winners.length;
+  renderClaimBadge();renderPhones();
+}
+function renderClaimBadge(){
+  var fresh=Math.max(0,H.claims.length-H.seenClaims);
+  $('#claimBadge').textContent=H.claims.length;
+  $('#claimsBtn').classList.toggle('alert',fresh>0);
+}
+function renderPhones(){
+  var now=Date.now(),k=0;
+  for(var id in seen){if(now-seen[id]<150000)k++;}
+  $('#hPhones').textContent=k;
+}
+setInterval(function(){if(net.role==='host')renderPhones();},10000);
+function renderSyncHost(){
+  var el=$('#hSync');if(!el)return;
+  var up=net.clients.filter(function(e){return e.up;}).length;
+  el.className='sync hsync';
+  if(typeof window.mqtt==='undefined'){el.textContent='同步元件沒載入：同仁需手動蓋章';return;}
+  if(up>0){el.classList.add('live');el.textContent='同步中（'+up+'/'+net.clients.length+'）';}
+  else{el.classList.add('wait');el.textContent='同步連線中…';}
+}
+function publishState(only){
+  publish('state',{v:1,game:H.game,drawn:H.drawn,round:H.round,t:Date.now()},true,only);
+}
+/* 換電腦時：新電腦還沒抽號，就接續同步伺服器上的號碼 */
+function onHostEcho(m){
+  if(adoptChecked)return;
+  adoptChecked=true;
+  var d=validDrawn(m.drawn);
+  if(!d||m.game===H.game)return;
+  if(H.drawn.length===0&&d.length>0){
+    H.game=String(m.game||'').slice(0,24)||H.game;H.drawn=d;
+    if(m.round&&roundById(m.round).id===m.round)H.round=m.round;
+    saveH();renderHost(false);toast('已接續同步伺服器上的 '+d.length+' 個號碼');
+  }
+}
+function onClaim(m){
+  var id=normId(m.id);if(!id)return;
+  var lines=Math.max(0,Math.min(12,parseInt(m.lines,10)||0));
+  var name=String(m.name||'').trim().slice(0,12);
+  for(var i=0;i<H.claims.length;i++){if(H.claims[i].id===id&&H.claims[i].lines>=lines)return;}
+  H.claims.push({id:id,name:name,lines:lines,t:Date.now()});
+  saveH();renderClaimBadge();
+  bigToast('賓果！'+id+(name?' '+name:''));
+  if(!$('#ovClaims').classList.contains('hidden'))renderClaims();
+}
+function onHello(m){var id=normId(m.id);if(!id)return;seen[id]=Date.now();renderPhones();}
+var bigTimer=null,bigQueue=[];
+function bigToast(text){
+  var t=document.querySelector('.bigtoast');
+  if(!t){t=document.createElement('div');t.className='bigtoast';t.setAttribute('role','status');document.body.appendChild(t);}
+  bigQueue.push(text);if(bigQueue.length>3)bigQueue=bigQueue.slice(-3);
+  t.textContent=bigQueue.join('　');t.classList.remove('hidden');
+  clearTimeout(bigTimer);bigTimer=setTimeout(function(){t.classList.add('hidden');bigQueue=[];},4500);
+}
+function randInt(k){var a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%k;}
+var audioCtx=null;
+function chime(){
+  if(!H.sound)return;
+  try{
+    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    var t=audioCtx.currentTime;
+    [880,1318.5].forEach(function(f,i){
+      var o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type='sine';o.frequency.value=f;
+      g.gain.setValueAtTime(0.0001,t+i*.12);g.gain.exponentialRampToValueAtTime(0.25,t+i*.12+.02);g.gain.exponentialRampToValueAtTime(0.0001,t+i*.12+.9);
+      o.connect(g);g.connect(audioCtx.destination);o.start(t+i*.12);o.stop(t+i*.12+1);
+    });
+  }catch(e){}
+}
+function speak(n){
+  if(!H.voice)return;
+  try{
+    if(!('speechSynthesis' in window))return;
+    var u=new SpeechSynthesisUtterance(colOf(n)+'，'+n+'號');
+    u.lang='zh-TW';u.rate=0.9;
+    var vs=speechSynthesis.getVoices()||[],pick=null,i;
+    for(i=0;i<vs.length;i++){if(/zh[-_]TW/i.test(vs[i].lang)){pick=vs[i];break;}}
+    if(!pick)for(i=0;i<vs.length;i++){if(/^zh/i.test(vs[i].lang)){pick=vs[i];break;}}
+    if(pick)u.voice=pick;
+    speechSynthesis.cancel();speechSynthesis.speak(u);
+  }catch(e){}
+}
+function drawNumber(){
+  if(rolling||H.drawn.length>=75)return;
+  var left=[];for(var n=1;n<=75;n++)if(H.drawn.indexOf(n)<0)left.push(n);
+  var pick=left[randInt(left.length)];
+  var finish=function(){
+    H.drawn.push(pick);saveH();rolling=false;adoptChecked=true;
+    $('#ball').classList.remove('rolling');
+    renderHost(true);publishState();chime();setTimeout(function(){speak(pick);},250);
+  };
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){finish();return;}
+  rolling=true;$('#drawBtn').disabled=true;$('#luck').textContent='';
+  $('#ball').classList.add('rolling');
+  var iv=setInterval(function(){setBall(left[randInt(left.length)]);},70);
+  setTimeout(function(){clearInterval(iv);finish();},1300);
+}
+$('#drawBtn').addEventListener('click',drawNumber);
+document.addEventListener('keydown',function(e){
+  if(location.hash!=='#host'||anyOpen())return;
+  var tag=(e.target&&e.target.tagName)||'';
+  if(tag==='INPUT'||tag==='TEXTAREA')return;
+  if(e.code==='Space'||e.key===' '){e.preventDefault();drawNumber();}
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){var open=document.querySelectorAll('.overlay:not(.hidden)');if(open.length)open[open.length-1].classList.add('hidden');}
+});
+
+/* 喊賓果名單 */
+function hhmmss(t){var d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');}
+function hhmm(t){return hhmmss(t).slice(0,5);}
+function registeredThisRound(id){return H.winners.some(function(w){return w.id===id&&w.round===H.round;});}
+function renderClaims(){
+  var R=roundById(H.round),drawnMap={};H.drawn.forEach(function(n){drawnMap[n]=true;});
+  if(!H.claims.length){$('#clList').innerHTML='<p class="note" style="font-size:17px;padding:12px 0">還沒有同仁喊賓果。</p>';return;}
+  var rows=H.claims.map(function(c,i){
+    var card=makeCard(c.id),a=analyze(card,function(n){return !!drawnMap[n];});
+    var ok=R.need===12?a.lines===12:a.lines>=R.need;
+    var at=ok?reachAt(card,H.drawn,R.need):0;
+    var chk=ok?'<span class="okc">符合 '+a.lines+' 條</span>':'<span class="noc">'+(a.lines?'只有 '+a.lines+' 條':'未連線')+'</span>';
+    var act=registeredThisRound(c.id)?'<span class="okc">已登記</span>':(ok?'<button type="button" class="xbtn reg" data-reg="'+i+'">登記得獎</button>':'')+' <button type="button" class="xbtn" data-look="'+i+'">看卡</button>';
+    return '<tr><td>'+(i+1)+'</td><td>'+hhmmss(c.t)+'</td><td><b>'+esc(c.id)+'</b></td><td>'+esc(c.name||'')+'</td><td>'+chk+'</td><td>'+(at?'第 '+at+' 號':'—')+'</td><td>'+act+'</td></tr>';
+  }).join('');
+  $('#clList').innerHTML='<table class="wtable"><thead><tr><th>#</th><th>時間</th><th>員工編號</th><th>姓名</th><th>系統核對（'+esc(R.short)+'）</th><th>第幾號達成</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+$('#claimsBtn').addEventListener('click',function(){H.seenClaims=H.claims.length;saveH();renderClaimBadge();renderClaims();openOv('ovClaims');});
+$('#clList').addEventListener('click',function(e){
+  var r=e.target.closest('[data-reg]'),l=e.target.closest('[data-look]');
+  if(r){var c=H.claims[+r.getAttribute('data-reg')];if(c){registerWinner(c.id,c.name);renderClaims();}}
+  if(l){var c2=H.claims[+l.getAttribute('data-look')];if(c2){closeOv('ovClaims');openVerify(c2.id);}}
+});
+$('#clClear').addEventListener('click',function(){
+  confirmBox('清空喊賓果名單？','只清空這個列表，已登記的得獎名單會保留。','取消','清空',function(){H.claims=[];H.seenClaims=0;saveH();renderClaimBadge();renderClaims();openOv('ovClaims');});
+});
+function registerWinner(id,name){
+  var R=roundById(H.round),drawnMap={};H.drawn.forEach(function(n){drawnMap[n]=true;});
+  var card=makeCard(id),a=analyze(card,function(n){return !!drawnMap[n];});
+  H.winners.push({id:id,name:name||'',round:H.round,lines:a.lines,at:reachAt(card,H.drawn,R.need)||H.drawn.length,time:Date.now()});
+  saveH();renderHost(false);toast('已登記：'+id+(name?' '+name:''));
+}
+
+/* 輸入編號驗證 */
+function openVerify(id){
+  $('#vId').value=id||'';
+  $('#vResult').innerHTML='<p class="note" style="font-size:17px">輸入同仁手機上顯示的員工編號。系統會用同一套規則重建他的卡，再拿你開出的號碼核對，不看手機上的蓋章。</p>';
+  openOv('ovVerify');
+  if(id)verify();else setTimeout(function(){$('#vId').focus();},30);
+}
+$('#verifyBtn').addEventListener('click',function(){openVerify('');});
+$('#vForm').addEventListener('submit',function(e){e.preventDefault();verify();});
+function verify(){
+  var id=normId($('#vId').value);
+  if(!id){$('#vResult').innerHTML='<div class="verdict no">請輸入員工編號</div>';return;}
+  var card=makeCard(id),drawnMap={};H.drawn.forEach(function(n){drawnMap[n]=true;});
+  var a=analyze(card,function(n){return !!drawnMap[n];});
+  var R=roundById(H.round),need=R.need,cls,txt;
+  if(need===12){
+    if(a.lines===12){cls='ok';txt='全卡蓋滿，符合「'+R.short+'」';}
+    else{var hit=0;card.forEach(function(row){row.forEach(function(n){if(n&&drawnMap[n])hit++;});});cls=a.lines>0?'mid':'no';txt='已開出 '+hit+' / 24 格，還沒蓋滿';}
+  }else if(a.lines>=need){cls='ok';txt='連線 '+a.lines+' 條，符合「'+R.short+'」（第 '+reachAt(card,H.drawn,need)+' 號時達成）';}
+  else if(a.lines>0){cls='mid';txt='目前連線 '+a.lines+' 條，本輪需要 '+need+' 條';}
+  else{cls='no';txt='尚未連線';}
+  var mini='';
+  COLS.forEach(function(ch){mini+='<div class="mh">'+ch+'</div>';});
+  for(var r=0;r<5;r++)for(var c=0;c<5;c++){
+    var n=card[r][c],k=a.inLine[r*5+c]?' in':'';
+    if(n===0)mini+='<div class="fr'+k+'">春</div>';
+    else mini+='<div class="'+(drawnMap[n]?'on':'')+k+'">'+n+'</div>';
+  }
+  var prev=H.winners.filter(function(w){return w.id===id;});
+  var claimName='';H.claims.forEach(function(cl){if(cl.id===id&&cl.name)claimName=cl.name;});
+  var side='<div class="vside"><div style="font-size:22px;font-weight:900">員工編號 '+esc(id)+'</div>';
+  if(prev.length)side+='<div class="dup">注意：這個編號已登記過 '+prev.map(function(w){return roundById(w.round).short;}).join('、')+'</div>';
+  if(cls==='ok'&&!registeredThisRound(id)){
+    side+='<label for="vName" style="font-weight:700">得獎人姓名（可不填）</label><input id="vName" autocomplete="off" maxlength="12" placeholder="例如 王小明" value="'+esc(claimName)+'"><button type="button" class="btn-primary" id="vSave">登記為「'+esc(R.short)+'」得獎</button>';
+  }
+  side+='<div class="note">紅底＝已開出的號碼，金框＝已連成的線。目前已開出 '+H.drawn.length+' 號。</div></div>';
+  $('#vResult').innerHTML='<div class="verdict '+cls+'">'+txt+'</div><div class="vbody" style="margin-top:14px"><div class="mini">'+mini+'</div>'+side+'</div>';
+  var sv=$('#vSave');
+  if(sv)sv.addEventListener('click',function(){
+    registerWinner(id,($('#vName').value||'').trim().slice(0,12));
+    $('#vId').value='';$('#vResult').innerHTML='<div class="verdict ok">已登記 '+esc(id)+'，可以驗證下一位</div>';$('#vId').focus();
+  });
+}
+
+/* 得獎名單 */
+function renderWinners(){
+  var sum='';
+  ROUNDS.forEach(function(R){var k=H.winners.filter(function(w){return w.round===R.id;}).length;if(k)sum+='<span>'+esc(R.short)+' '+k+' 人</span>';});
+  $('#wSum').innerHTML=sum||'<span>還沒有人登記</span>';
+  if(!H.winners.length){$('#wList').innerHTML='';return;}
+  var rows=H.winners.map(function(w,i){
+    return '<tr><td>'+(i+1)+'</td><td>'+esc(roundById(w.round).short)+'</td><td><b>'+esc(w.id)+'</b></td><td>'+esc(w.name||'')+'</td><td>第 '+w.at+' 號</td><td>'+hhmm(w.time)+'</td><td><button type="button" class="xbtn" data-del="'+i+'">刪除</button></td></tr>';
+  }).join('');
+  $('#wList').innerHTML='<table class="wtable"><thead><tr><th>#</th><th>輪次</th><th>員工編號</th><th>姓名</th><th>達成</th><th>時間</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+$('#winnersBtn').addEventListener('click',function(){renderWinners();openOv('ovWinners');});
+$('#wList').addEventListener('click',function(e){
+  var b=e.target.closest('[data-del]');if(!b)return;
+  if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='確定刪除';return;}
+  H.winners.splice(+b.getAttribute('data-del'),1);saveH();renderWinners();renderHost(false);
+});
+$('#wCopy').addEventListener('click',function(){
+  var txt=H.winners.map(function(w,i){return (i+1)+'. '+roundById(w.round).short+'｜'+w.id+(w.name?' '+w.name:'')+'｜第 '+w.at+' 號｜'+hhmm(w.time);}).join('\n');
+  if(!txt){toast('名單是空的');return;}
+  try{navigator.clipboard.writeText(txt).then(function(){toast('名單已複製');},function(){toast('無法複製，請改用截圖');});}catch(e){toast('無法複製，請改用截圖');}
+});
+
+/* QR Code */
+function playerUrl(){return location.origin+location.pathname+'?r='+H.room;}
+function qrSvg(text){
+  if(typeof window.qrcode!=='function')return null;
+  try{
+    var q=window.qrcode(0,'M');q.addData(text);q.make();
+    var n=q.getModuleCount(),m=4,size=n+m*2,d='';
+    for(var r=0;r<n;r++)for(var c=0;c<n;c++)if(q.isDark(r,c))d+='M'+(c+m)+' '+(r+m)+'h1v1h-1z';
+    return '<svg viewBox="0 0 '+size+' '+size+'" role="img" aria-label="領取賓果卡的 QR Code" shape-rendering="crispEdges"><rect width="'+size+'" height="'+size+'" fill="#fff"/><path d="'+d+'" fill="#2b1810"/></svg>';
+  }catch(e){return null;}
+}
+function renderQR(){
+  var url=playerUrl(),svg=qrSvg(url);
+  $('#qBox').innerHTML='<div class="qrtitle" id="qTitle">手機掃描，領取你的賓果卡</div>'+(svg||'<p style="font-size:18px">QR Code 產生器沒有載入，請把下面的網址另外做成 QR Code。</p>')+'<div class="url">'+esc(url)+'</div>';
+}
+$('#qrBtn').addEventListener('click',function(){renderQR();openOv('ovQR');});
+
+/* 設定 */
+function openSettings(){
+  var html='';
+  ROUNDS.forEach(function(R){html+='<label class="radio"><input type="radio" name="round" value="'+R.id+'"'+(H.round===R.id?' checked':'')+'> '+esc(R.label)+'</label>';});
+  $('#sRounds').innerHTML=html;
+  $('#sVoice').checked=H.voice;$('#sSound').checked=H.sound;$('#sRoom').value=H.room;
+  $('#sUndo').disabled=!H.drawn.length;
+  openOv('ovSettings');
+}
+$('#settingsBtn').addEventListener('click',openSettings);
+$('#hRound').addEventListener('click',openSettings);
+$('#sRounds').addEventListener('change',function(e){if(e.target.name==='round'){H.round=e.target.value;saveH();renderHost(false);publishState();}});
+$('#sVoice').addEventListener('change',function(e){H.voice=e.target.checked;saveH();});
+$('#sSound').addEventListener('change',function(e){H.sound=e.target.checked;saveH();});
+$('#sRoomSave').addEventListener('click',function(){
+  var r=normRoom($('#sRoom').value);
+  if(r.length<4){toast('房間代碼至少 4 個英文或數字');return;}
+  if(r===H.room){toast('已經在使用這個代碼');return;}
+  H.room=r;saveH();adoptChecked=false;seen={};
+  startNet('host',H.room);renderHost(false);toast('已改用房間代碼 '+r+'，QR Code 也跟著換了');
+});
+$('#sUndo').addEventListener('click',function(){
+  if(!H.drawn.length)return;
+  var n=H.drawn[H.drawn.length-1];
+  closeOv('ovSettings');
+  confirmBox('收回號碼？','要收回最後抽出的「'+colOf(n)+' '+n+'」嗎？只在抽錯或誤按時使用，同仁手機上的章也會跟著拿掉。','不要收回','收回這個號碼',function(){H.drawn.pop();saveH();renderHost(false);publishState();toast('已收回 '+colOf(n)+' '+n);});
+});
+$('#sReset').addEventListener('click',function(){
+  closeOv('ovSettings');
+  confirmBox('開新局？','會清除已開出的 '+H.drawn.length+' 個號碼，同仁手機上的章也會清空。得獎名單會保留。','取消','清除號碼，開新局',function(){H.drawn=[];H.game=rid(8);H.claims=[];H.seenClaims=0;saveH();renderHost(false);publishState();toast('已開新局');});
+});
+$('#sClearW').addEventListener('click',function(){
+  closeOv('ovSettings');
+  confirmBox('清除得獎名單？','會刪除全部 '+H.winners.length+' 筆得獎登記，無法復原。','取消','全部清除',function(){H.winners=[];saveH();renderHost(false);toast('名單已清除');});
+});
+$('#sExit').addEventListener('click',function(){closeOv('ovSettings');location.hash='';});
+
+/* ===== 切換畫面 ===== */
+function route(){
+  if(location.hash==='#host'){startNet('host',H.room);renderHost(false);renderSyncHost();}
+  else renderPlayer();
+}
+window.addEventListener('hashchange',route);
+route();
+})();
+</script>
+</body>
+</html>
