@@ -789,6 +789,7 @@ if(!Array.isArray(H.winners))H.winners=[];
 if(!Array.isArray(H.claims))H.claims=[];
 if(typeof H.voice!=='boolean')H.voice=true;
 if(typeof H.sound!=='boolean')H.sound=true;
+(function(){var r='';try{r=normRoom(new URLSearchParams(location.search).get('r'));}catch(e){}if(r.length>=4&&r!==H.room){H.room=r;}})();
 if(!H.room)H.room=rid(6);
 if(!H.game)H.game=rid(8);
 H.seenClaims=H.seenClaims||0;
